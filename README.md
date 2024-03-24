@@ -4,7 +4,7 @@ This project includes the code for the paper:
 > Jai Aggarwal, Brian Diep, Julia Watson, and Suzanne Stevenson. 2023. Investigating Online Community Engagement through Stancetaking. In Findings of the Association for Computational Linguistics: EMNLP 2023, pages 5814–5830, Singapore. Association for Computational Linguistics.
 
 ## Main Analyses
-The code for the main analyses can be found in src/main.py. The smaller data files can be found in the data_files folder, and the larger data files can be found at the [following OSF link]([url](https://osf.io/z9rxw/)).
+The code for the main analyses can be found in src/main.py. The smaller data files can be found in the data_files folder, and the larger data files can be found at the [following OSF link](https://osf.io/z9rxw/).
 To generate the data required for the main analyses from scratch, you can refer to the Data Extraction section below.
 
 
