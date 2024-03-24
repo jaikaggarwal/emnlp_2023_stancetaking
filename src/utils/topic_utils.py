@@ -1,4 +1,6 @@
-from core_utils import * 
+from utils.core_utils import * 
+import seaborn as sb
+
 np.random.seed(42)
 
 TOPICS_DIRECTORY = "/u/jai/stancetaking/data_files/subreddit_topics/"
@@ -175,6 +177,115 @@ def map_subtopic_to_topic(subreddit_to_subtopic, topic_to_subtopic):
                                            })
 
     return df.set_index("index")[0].to_dict()
+
+
+
+def topic_similarity_heatmaps(data, title, to_normalize=False, vmax=None):
+    data = pd.DataFrame(data)
+    data = data.T.loc[data.index].T
+    if to_normalize:
+        unique_vals = data.to_numpy()[np.triu_indices(data.shape[0])]
+        mean_sim = np.mean(unique_vals)
+        std_sim = np.std(unique_vals)
+        data = (data-mean_sim)/std_sim  
+    font = {'font.size'   : 35,
+        'xtick.labelsize': 35, #13 before
+        'ytick.labelsize': 35,
+        "axes.titlepad": 30}
+
+    plt.rcParams.update(font)
+    plt.figure(figsize = (16,11))
+    if vmax:
+        sb.heatmap(data,  cmap="rocket_r", vmin=-vmax, vmax=vmax) #cmap="PiYG_r",
+    else:
+        sb.heatmap(data, cmap="flare")
+    plt.title(f"{title}", fontweight='bold')
+    
+    return data
+
+
+def load_topics():
+    with open("../data_files/subreddit_topics/main_subreddit_topics.txt", "r") as file:
+        subreddit_topics = file.readlines()
+
+    print(len(subreddit_topics))
+
+    sub_to_topic = defaultdict(list)
+    sub_to_special_topic = defaultdict(list)
+    topic_to_special_topic = defaultdict(list)
+
+    curr_topic = None
+    curr_special_topic = None
+
+    for topic in tqdm(subreddit_topics):
+        topic = topic.strip().lower()
+        if len(topic) < 3:
+            continue
+        if re.match(r"^#\s?\*", topic):
+            topic = re.findall(r"[^\*#]{2,}", topic)[0]
+            curr_topic = topic
+        elif re.match(r"^##\s?\*", topic):
+            topic = re.findall(r"[^\*#]{2,}", topic)[0]
+            curr_special_topic = topic
+            topic_to_special_topic[curr_topic].append(curr_special_topic)
+        elif re.match(r"^#{3,}\s?\*", topic):
+            continue
+        elif topic.startswith("**/r"):
+            topic = topic.split(" ")[0]
+            topic = topic[5:-2]
+            sub_to_topic[topic].append(curr_topic)
+            sub_to_special_topic[topic].append(curr_topic + "_" + curr_special_topic)
+        elif topic.startswith("/r"):
+            topic = topic.split(" ")[0]
+            topic = topic[3:]
+            sub_to_topic[topic].append(curr_topic)
+            sub_to_special_topic[topic].append(curr_topic + "_" + curr_special_topic)
+        else:
+            pass
+
+
+    topic_file_to_topic = {
+        "advice": "discussion_advice",
+        "art": "hobbies/occupations_arts/writing",
+        "cars": "hobbies/occupations_automotive",
+        "discussion": "discussion_general",
+        "diy": "hobbies/occupations_general",
+        "education": "educational_general",
+        "food": "lifestyle_food",
+        "general_sports": "entertainment_sports",
+        "location_reddits": "other_geography",
+        "memes": "humor_memes/rage comics",
+        "music": "entertainment_music",
+        "nsfw": "nsfw",
+        "politics": "other_news/politics",
+        "scifi": "entertainment_genres",
+        "tech": "technology_general",
+        "universities": "other_universities",
+        "video_games": "entertainment_video_games"
+    }
+
+    new_subreddits = 0
+    for file_name in os.listdir("../data_files/subreddit_topics/"):
+        with open(f"../data_files/subreddit_topics/{file_name}", "r") as file:
+            data = file.readlines()
+        for line in data:
+            line = line.strip().lower()
+            if not line.startswith("http"):
+                continue
+            try:
+                r_idx = line.index("/r/")
+            except:
+                continue
+            sub = line[r_idx + 3:]
+            sub_to_special_topic[sub].append(topic_file_to_topic[file_name[:-4]])
+            new_subreddits += 1
+
+    for sub in sub_to_special_topic:
+        if sub.startswith("ask"):
+            sub_to_special_topic[sub] = ["discussion_question/answer"] + sub_to_special_topic[sub]
+    
+    return sub_to_topic, sub_to_special_topic, topic_to_special_topic
+
 
 
 if __name__ == "__main__":
